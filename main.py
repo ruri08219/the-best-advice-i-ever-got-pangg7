@@ -3,6 +3,8 @@
 
 Writes exactly one sentence (at most 200 characters) about the best advice
 the writer ever received to /output/entry.txt, with no trailing newline.
+A 600-byte UTF-8 ceiling guards the entry, and the write is verified by
+reading the file back and comparing it to the validated text.
 
 The sentence: one concrete scene (twelve years old, crying over a lost race),
 one reversal (losing does not matter — finishing does), one landing line
@@ -22,6 +24,7 @@ ENTRY = (
 )
 
 MAX_CHARS = 200
+MAX_BYTES = 600
 
 
 def validate(text):
@@ -32,6 +35,8 @@ def validate(text):
         raise ValueError("entry must not be empty or whitespace-only")
     if len(text) > MAX_CHARS:
         raise ValueError("entry exceeds 200 characters")
+    if len(text.encode("utf-8", "surrogatepass")) > MAX_BYTES:
+        raise ValueError("entry exceeds 600 bytes when UTF-8 encoded")
     if text != text.strip():
         raise ValueError("entry must not have leading or trailing space")
     if "\n" in text or "\r" in text:
@@ -63,6 +68,10 @@ def main():
         os.makedirs(parent, exist_ok=True)
     with open(out, "w", encoding="utf-8", newline="") as f:
         f.write(text)
+    with open(out, "r", encoding="utf-8", newline="") as f:
+        if f.read() != text:
+            print("write round-trip mismatch", file=sys.stderr)
+            return 1
     return 0
 
 
